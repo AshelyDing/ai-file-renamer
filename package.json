@@ -1,0 +1,60 @@
+{
+  "name": "ai-file-renamer",
+  "version": "0.1.0",
+  "description": "AI File Renamer —— AI 自动重命名文件的桌面 GUI 工具，支持 pdf / docx / xlsx / png / jpg",
+  "main": "dist/main/main.js",
+  "author": "AI File Renamer Contributors",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.renderer.json && tsc && node scripts/copy-assets.cjs",
+    "dist": "npm run build && npx electron-builder --win portable"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^1.1.1",
+    "tesseract.js": "^6.0.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pdf-parse": "^1.1.0",
+    "electron": "^32.0.0",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.8.3"
+  },
+  "build": {
+    "appId": "com.aifilerenamer.app",
+    "productName": "AI File Renamer",
+    "copyright": "Copyright © 2026 AI File Renamer Contributors",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/tesseract.js/**"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "dist/main/**/*",
+      "dist/renderer/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-v${version}-portable.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-v${version}-portable.${ext}",
+      "requestExecutionLevel": "user",
+      "unpackDirName": "ai-file-renamer"
+    }
+  }
+}

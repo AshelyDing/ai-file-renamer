@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+    />
+    <title>AI File Renamer</title>
+    <style>
+      /* 极简布局样式（CSP 的 style-src 允许内联 style） */
+      body {
+        font-family: "Microsoft YaHei", sans-serif;
+        margin: 0;
+        background: #f5f6f8;
+        color: #2c3e50;
+      }
+      #app {
+        max-width: 960px;
+        margin: 24px auto;
+        background: #fff;
+        padding: 24px 32px;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      }
+      h1 {
+        font-size: 22px;
+        margin-top: 0;
+      }
+      .step {
+        margin-bottom: 24px;
+      }
+      .step h2 {
+        font-size: 15px;
+        margin: 0 0 8px;
+        color: #34495e;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      button {
+        padding: 8px 16px;
+        border: 1px solid #3498db;
+        background: #3498db;
+        color: #fff;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:disabled {
+        background: #bdc3c7;
+        border-color: #bdc3c7;
+        cursor: not-allowed;
+      }
+      select,
+      input[type="text"],
+      input[type="password"] {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        resize: vertical;
+        font-family: inherit;
+      }
+      #selectedFile {
+        color: #7f8c8d;
+        word-break: break-all;
+      }
+      #status {
+        color: #2c3e50;
+      }
+      #suggestedName {
+        flex: 1;
+        min-width: 240px;
+      }
+      footer {
+        margin-top: 16px;
+        font-size: 12px;
+        color: #95a5a6;
+        border-top: 1px solid #eee;
+        padding-top: 12px;
+      }
+      /* 模式切换单选框 */
+      .radio-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+      }
+      /* AI 设置折叠面板（<details> 原生折叠，无需 JS） */
+      details {
+        border: 1px solid #e0e3e7;
+        border-radius: 6px;
+        padding: 10px 14px;
+        margin-bottom: 24px;
+        background: #fafbfc;
+      }
+      summary {
+        cursor: pointer;
+        font-size: 15px;
+        color: #34495e;
+        user-select: none;
+      }
+      .config-form {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .config-form label {
+        width: 80px;
+        flex-shrink: 0;
+      }
+      .config-form input {
+        flex: 1;
+        min-width: 280px;
+      }
+      #configStatus {
+        font-size: 13px;
+        color: #7f8c8d;
+      }
+      /* 批量模式文件列表表格 */
+      #batchTable {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+        table-layout: fixed;
+      }
+      #batchTable th,
+      #batchTable td {
+        border: 1px solid #e0e3e7;
+        padding: 6px 8px;
+        font-size: 13px;
+        vertical-align: top;
+        text-align: left;
+        word-break: break-all;
+      }
+      #batchTable th {
+        background: #f5f6f8;
+      }
+      #batchTable td input[type="text"] {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 4px 6px;
+        font-size: 13px;
+      }
+      .preview-cell {
+        max-height: 64px;
+        overflow: hidden;
+        color: #7f8c8d;
+      }
+      #batchSummary {
+        margin-top: 8px;
+        font-size: 13px;
+        color: #7f8c8d;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app">
+      <h1>AI File Renamer</h1>
+
+      <!-- AI 设置：折叠面板，填写 API Key / 接口地址 / 模型并保存 -->
+      <details>
+        <summary>AI 设置（API Key / 接口地址 / 模型）</summary>
+        <div class="config-form">
+          <div class="row">
+            <label for="apiKeyInput">API Key：</label>
+            <input id="apiKeyInput" type="password" placeholder="sk-..." />
+          </div>
+          <div class="row">
+            <label for="baseUrlInput">接口地址：</label>
+            <input id="baseUrlInput" type="text" placeholder="https://api.deepseek.com/v1" />
+          </div>
+          <div class="row">
+            <label for="modelSelect">模型：</label>
+            <select id="modelSelect">
+              <option value="deepseek-chat">deepseek-chat（DeepSeek 对话）</option>
+              <option value="deepseek-reasoner">deepseek-reasoner（DeepSeek 推理）</option>
+              <option value="gpt-4o-mini">gpt-4o-mini（OpenAI）</option>
+              <option value="qwen-plus">qwen-plus（通义千问）</option>
+              <option value="glm-4-flash">glm-4-flash（智谱）</option>
+            </select>
+          </div>
+          <div class="row">
+            <button id="btnSaveConfig">保存配置</button>
+            <span id="configStatus"></span>
+          </div>
+        </div>
+      </details>
+
+      <!-- 工作模式切换 -->
+      <section class="step">
+        <h2>工作模式</h2>
+        <div class="row">
+          <label class="radio-label">
+            <input type="radio" name="mode" value="single" checked /> 单文件模式
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="mode" value="batch" /> 批量模式
+          </label>
+        </div>
+      </section>
+
+      <!-- 命名模板（两种模式共用） -->
+      <section class="step">
+        <h2>命名模板</h2>
+        <select id="templateSelect">
+          <option value="">智能命名（根据内容自动起名）</option>
+          <option value="使用「主题-日期」格式，如：季度报告-2026年9月">主题-日期</option>
+          <option value="使用「作者-主题」格式，如：张三-机器学习笔记">作者-主题</option>
+          <option value="使用「项目-主题-版本」格式，如：AI重命名-需求文档-v2">项目-主题-版本</option>
+          <option value="文件名控制在 20 字以内，突出核心主题">简短描述</option>
+        </select>
+      </section>
+
+      <!-- ==================== 单文件模式区块 ==================== -->
+      <div id="singleModeArea">
+        <!-- 第一步：选择要重命名的文件 -->
+        <section class="step">
+          <h2>1. 选择文件（支持 pdf / docx / xlsx / png / jpg）</h2>
+          <div class="row">
+            <button id="btnSelectFile">选择文件</button>
+            <span id="selectedFile">未选择文件</span>
+          </div>
+        </section>
+
+        <!-- 第二步：内容预览与 AI 生成 -->
+        <section class="step">
+          <h2>2. 内容预览与 AI 建议</h2>
+          <div class="row" style="margin-bottom: 8px;">
+            <button id="btnGenerate">生成 AI 文件名</button>
+            <span id="status"></span>
+          </div>
+          <textarea
+            id="contentPreview"
+            rows="8"
+            readonly
+            placeholder="选择文件后，这里会显示提取出的内容摘要"
+          ></textarea>
+          <div class="row" style="margin-top: 8px;">
+            <label for="suggestedName">AI 建议文件名：</label>
+            <input id="suggestedName" type="text" placeholder="点击「生成 AI 文件名」后显示，可手动修改" />
+          </div>
+        </section>
+
+        <!-- 第三步：确认重命名 -->
+        <section class="step">
+          <button id="btnRename" disabled>确认重命名</button>
+        </section>
+      </div>
+
+      <!-- ==================== 批量模式区块（默认隐藏） ==================== -->
+      <div id="batchModeArea" hidden>
+        <section class="step">
+          <h2>批量处理</h2>
+          <div class="row">
+            <button id="btnSelectMulti">选择多个文件</button>
+            <button id="btnBatchGenerate">批量生成 AI 名称</button>
+            <button id="btnBatchRename">批量执行重命名</button>
+            <span id="batchStatus"></span>
+          </div>
+        </section>
+
+        <section class="step">
+          <h2>文件列表</h2>
+          <table id="batchTable">
+            <thead>
+              <tr>
+                <th style="width: 16%;">原文件名</th>
+                <th style="width: 26%;">提取内容预览</th>
+                <th style="width: 20%;">AI 建议新名称</th>
+                <th style="width: 20%;">手动编辑</th>
+                <th style="width: 18%;">状态</th>
+              </tr>
+            </thead>
+            <tbody id="batchTableBody"></tbody>
+          </table>
+          <div id="batchSummary"></div>
+        </section>
+      </div>
+
+      <footer id="versions"></footer>
+    </main>
+
+    <script type="module" src="./renderer.js"></script>
+  </body>
+</html>
